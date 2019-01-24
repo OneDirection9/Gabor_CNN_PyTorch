@@ -2,6 +2,8 @@ from __future__ import division
 import os
 import time
 import argparse
+import cv2
+import numpy as np
 import torch
 from torchvision import datasets, transforms
 import torch.optim as optim
@@ -11,7 +13,6 @@ import torch.nn.functional as F
 from utils import accuracy, AverageMeter, save_checkpoint, visualize_graph, get_parameters_size
 from tensorboardX import SummaryWriter
 from net_factory import get_network_fn
-
 
 parser = argparse.ArgumentParser(description='PyTorch GCN MNIST Training')
 parser.add_argument('--epochs', default=50, type=int, metavar='N',
@@ -60,12 +61,20 @@ test_transform = transforms.Compose([
     normalize,
     ])
 
-
-train_dataset = datasets.MNIST(root=args.dataset_dir, train=True, 
-    				download=True, transform=train_transform)
-test_dataset = datasets.MNIST(root=args.dataset_dir, train=False, 
-                    download=True,transform=test_transform)
-
+def gray_image_loader(path):
+    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    return np.expand_dims(img, axis=2)
+# train dataset path
+train_dataset_path = '/data/image-datasets/512_train_lmdb_0.4/images'
+train_dataset = datasets.ImageFolder(train_dataset_path,
+                            transform=train_transform,
+                            loader=gray_image_loader)
+# test dataset path
+test_dataset_path = '/data/image-datasets/512_train_lmdb_0.4/images'
+test_dataset = datasets.ImageFolder(test_dataset_path,
+                           transform=test_transform,
+                           loader=gray_image_loader)
+print(train_dataset[0][0].shape)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size,
                                 num_workers=args.workers, pin_memory=True, shuffle=True)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size,
@@ -160,3 +169,4 @@ print('Finished!')
 print('Best Test Precision@top1:{:.2f}'.format(best_prec1))
 writer.add_scalar('Best TOP1', best_prec1, 0)
 writer.close()
+
